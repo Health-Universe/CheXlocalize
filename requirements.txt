@@ -16,7 +16,6 @@ seaborn
 six
 statsmodels
 stqdm
-tempfile
 torch
 torchvision
 tqdm
