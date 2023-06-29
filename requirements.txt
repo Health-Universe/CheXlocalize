@@ -4,7 +4,6 @@ pandas
 base64
 cycler
 fonttools
-json
 kiwisolver
 matplotlib
 opencv-python
