@@ -1,0 +1,11 @@
+threshold,task
+0.2,Airspace Opacity
+0.2,Atelectasis
+0.3,Cardiomegaly
+0.2,Consolidation
+0.2,Edema
+0.3,Enlarged Cardiomediastinum
+0.2,Lung Lesion
+0.2,Pleural Effusion
+0.2,Pneumothorax
+0.8,Support Devices
