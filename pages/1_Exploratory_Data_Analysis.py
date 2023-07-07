@@ -1,12 +1,9 @@
 import streamlit as st
-import tempfile
-import subprocess
-import numpy as np
-import pandas as pd
 import json
-import base64
-from stqdm import stqdm
 import os
+import pandas as pd
+import io
+import tempfile
 from pycocotools import mask
 import sys
 
@@ -21,13 +18,14 @@ st.divider()
 seg_path = st.file_uploader('Upload', type='json',
                             help="**Input:** JSON of segmentations (see Example Input).\n\n**Output:** CSV of counts.")
 
+# Example Input
 with st.expander("Example Input"):
     st.code("""
     {
         'patient64622_study1_view1_frontal': {
             'Enlarged Cardiomediastinum': {
                 'size': [2320, 2828], # (h, w)
-                'counts': '`Vej1Y2iU2c0B?F9G7I6J5K6J6J6J6J6H8G9G9J6L4L4L4L4L3M3M3M3L4L4...'
+                'counts': '`Vej1Y2iU2c0B?F9G7I6J5K6J6J6J6J6J6H8G9G9J6L4L4L4L4L3M3M3M3L4L4...'
             },
             ....
             'Support Devices': {
@@ -43,31 +41,55 @@ with st.expander("Example Input"):
 
     """, language="python")
 
-temp_dir = tempfile.TemporaryDirectory()
-save_dir = temp_dir.name
+# Processing
+if seg_path is not None:
+    run_button = st.button("Run", help="Generating Segmentation Counts")
 
-if st.button("Run", help="Generating Segmentation Counts"):
-    with st.spinner("Running"):
-        if seg_path is not None:
+    if run_button:
+        with st.spinner("Running"):
             seg_dict = json.load(seg_path)
 
-            seg_file_path = os.path.join(save_dir, "seg_file.json")
-            with open(seg_file_path, "w") as f:
-                json.dump(seg_dict, f)
+            # Save seg_dict in session state
+            if "seg_dict" not in st.session_state:
+                st.session_state["seg_dict"] = seg_dict
 
-            count_segs(seg_file_path, save_dir)
+            # Call count_segs if seg_dict exists
+            if "seg_dict" in st.session_state:
+                save_dir = tempfile.mkdtemp()
 
-            output_csv_path = os.path.join(save_dir, "n_segs.csv")
-            df = pd.read_csv(output_csv_path)
+                seg_file_path = os.path.join(save_dir, "seg_file.json")
+                with open(seg_file_path, "w") as f:
+                    json.dump(st.session_state["seg_dict"], f)
 
-    st.dataframe(df)
+                count_segs(seg_file_path, save_dir)
 
+                output_csv_path = os.path.join(save_dir, "n_segs.csv")
+                df = pd.read_csv(output_csv_path)
+
+                # Save df in session state
+                st.session_state["df"] = df
+
+                # Clean up temp dir
+                os.remove(seg_file_path)
+                os.remove(output_csv_path)
+                os.rmdir(save_dir)
+
+        if "df" in st.session_state:
+            st.dataframe(st.session_state["df"])
+
+# Output CSV data
+output = io.BytesIO()
+if "df" in st.session_state:
+    st.session_state["df"].to_csv(output, index=False)
+    output.seek(0)
+    
+    st.markdown("---")
+    st.markdown("### Download")
+
+    # Download CSV
     st.download_button(
-        label="Download",
-        data=df.to_csv().encode('utf-8'),
+        label="Download Segmentation Counts",
+        data=output,
         file_name="n_segs.csv",
-        mime="text/csv",
-        help="Segmentation Counts"
+        mime="text/csv"
     )
-
-temp_dir.cleanup()
