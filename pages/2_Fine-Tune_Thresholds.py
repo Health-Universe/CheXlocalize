@@ -108,62 +108,77 @@ with st.expander("Example Input #2 - JSON"):
     """, language="python")
 
 # File processing
-run_button = st.button('Run', help="Generating Segmentation Thresholds")
+if map_dir is not None and gt_path is not None:
+    if st.button('Run', help="Generating Segmentation Thresholds"):
+        if map_dir is not None and gt_path is not None:
+            # Save uploaded files to temp directory
+            with tempfile.TemporaryDirectory() as temp_dir:
+                # Save uploaded files to session state
+                st.session_state['map_dir'] = map_dir
+                st.session_state['gt_path'] = gt_path
 
-if run_button:
-    if map_dir is not None and gt_path is not None:
-        # Save uploaded files to temp directory
-        with tempfile.TemporaryDirectory() as temp_dir:
-            map_paths = []
-            gt_file_path = os.path.join(temp_dir, 'ground_truth.json')
+                map_paths = []
+                gt_file_path = os.path.join(temp_dir, 'ground_truth.json')
 
-            # Save GT JSON file
-            with open(gt_file_path, 'wb') as f:
-                f.write(gt_path.read())
+                # Save GT JSON file
+                with open(gt_file_path, 'wb') as f:
+                    f.write(gt_path.read())
 
-            # Save heatmap pkl files
-            for map_file in map_dir:
-                map_path = os.path.join(temp_dir, map_file.name)
-                with open(map_path, 'wb') as f:
-                    f.write(map_file.read())
-                map_paths.append(map_path)
+                # Save heatmap pkl files
+                for map_file in map_dir:
+                    map_path = os.path.join(temp_dir, map_file.name)
+                    with open(map_path, 'wb') as f:
+                        f.write(map_file.read())
+                    map_paths.append(map_path)
 
-            # Load GT JSON
-            with open(gt_file_path, 'r') as f:
-                gt = json.load(f)
+                # Load GT JSON
+                with open(gt_file_path, 'r') as f:
+                    gt = json.load(f)
 
-            # Generate thresholds and save
-            with st.spinner("Running"):
-                tuning_results = pd.DataFrame(columns=['threshold', 'task'])
-                for task in tqdm(sorted(LOCALIZATION_TASKS)):
-                    threshold = tune_threshold(task, gt, temp_dir)
-                    df = pd.DataFrame([[round(threshold, 1), task]],
-                                      columns=['threshold', 'task'])
-                    tuning_results = pd.concat([tuning_results, df], axis=0)
-                time.sleep(1)
+                # Generate thresholds and save
+                with st.spinner("Running"):
+                    tuning_results = pd.DataFrame(columns=['threshold', 'task'])
+                    for task in tqdm(sorted(LOCALIZATION_TASKS)):
+                        threshold = tune_threshold(task, gt, temp_dir)
+                        df = pd.DataFrame([[round(threshold, 1), task]],
+                                          columns=['threshold', 'task'])
+                        tuning_results = pd.concat([tuning_results, df], axis=0)
+                    time.sleep(1)
 
-            # Download button for outputted CSV file
-            output_csv = tuning_results.to_csv(index=False)
-            output_path = "tuning_results.csv"
+                # Store tuning_results in session state
+                st.session_state['tuning_results'] = tuning_results
 
-            def download_csv():
-                with open(output_path, 'w') as f:
-                    f.write(output_csv)
-                with open(output_path, 'r') as f:
-                    data = f.read()
-                st.download_button(
-                    label="Download Generated Segmentation Thresholds",
-                    data=data,
-                    file_name=output_path,
-                    mime="application/csv"
-                )
+# Download button for outputted CSV file
+if 'tuning_results' in st.session_state:
+    output_csv = st.session_state['tuning_results'].to_csv(index=False)
+    output_path = "tuning_results.csv"
 
-            st.markdown("---")
-            st.markdown("### Download")
-            download_csv()
+    def download_csv():
+        with open(output_path, 'w') as f:
+            f.write(output_csv)
+        with open(output_path, 'r') as f:
+            data = f.read()
+        st.download_button(
+            label="Download Generated Segmentation Thresholds",
+            data=data,
+            file_name=output_path,
+            mime="application/csv"
+        )
 
-st.divider()
+    st.markdown("---")
+    st.markdown("### Download")
+    download_csv()
 
+#
+#
+#
+#
+#
+#
+#
+#
+#
+#
 #
 #
 #
@@ -171,5 +186,6 @@ st.divider()
 #
 
 # Probability Thresholds
+st.divider()
 st.subheader("Probability Thresholds")
 st.write("Coming Soon!")
