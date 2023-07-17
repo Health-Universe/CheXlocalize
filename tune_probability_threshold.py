@@ -98,7 +98,7 @@ def main(args):
                                      columns=['prob_threshold','mIoU','task']) \
                                         for i in range(len(cutoff))],
                        ignore_index=True)
-        tuning_results = tuning_results.concat(df, ignore_index=True)
+        tuning_results = pd.concat([tuning_results, df], ignore_index=True)
 
     tuning_results.to_csv(f'{args.save_dir}/probability_tuning_results.csv',
                           index=False)
