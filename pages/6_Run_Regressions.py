@@ -177,3 +177,5 @@ if (
 #Model Assurance
 st.divider()
 st.subheader("Regression Model Assurance")
+
+st.write("Available upon request")
